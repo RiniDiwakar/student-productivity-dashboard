@@ -1,0 +1,207 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Productivity Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2>🎓 StudyFlow</h2>
+
+            <nav>
+                <button class="nav-btn active">🏠 Dashboard</button>
+                <button class="nav-btn">✅ Tasks</button>
+                <button class="nav-btn">📚 Assignments</button>
+                <button class="nav-btn">⏱️ Pomodoro</button>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <p>Stay focused.</p>
+                <p>Keep learning 🚀</p>
+            </div>
+        </aside>
+
+
+        <!-- Main Content -->
+        <main class="main">
+
+            <header class="topbar">
+                <div>
+                    <h1>Student Productivity Dashboard</h1>
+                    <p>Organize your study life and stay productive.</p>
+                </div>
+
+                <div class="date" id="currentDate"></div>
+            </header>
+
+
+            <!-- Statistics -->
+            <section class="stats">
+
+                <div class="stat-card">
+                    <div class="stat-icon">📝</div>
+                    <div>
+                        <p>Total Tasks</p>
+                        <h2 id="totalTasks">0</h2>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div>
+                        <p>Completed</p>
+                        <h2 id="completedTasks">0</h2>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">📚</div>
+                    <div>
+                        <p>Assignments</p>
+                        <h2 id="assignmentCount">0</h2>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">🎯</div>
+                    <div>
+                        <p>Progress</p>
+                        <h2 id="progressPercent">0%</h2>
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- Main Grid -->
+            <section class="dashboard-grid">
+
+                <!-- Tasks -->
+                <div class="card tasks-card">
+
+                    <div class="card-header">
+                        <div>
+                            <h2>Today's Tasks</h2>
+                            <p>Manage your daily tasks</p>
+                        </div>
+                    </div>
+
+                    <form id="taskForm" class="task-form">
+                        <input
+                            type="text"
+                            id="taskInput"
+                            placeholder="Enter a new task..."
+                            required
+                        >
+
+                        <select id="priorityInput">
+                            <option value="High">High</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+
+                        <button type="submit">Add Task</button>
+                    </form>
+
+                    <div id="taskList" class="task-list"></div>
+
+                </div>
+
+
+                <!-- Progress -->
+                <div class="card progress-card">
+
+                    <h2>Study Progress</h2>
+                    <p>Your task completion progress</p>
+
+                    <div class="progress-circle">
+                        <span id="circlePercent">0%</span>
+                    </div>
+
+                    <div class="progress-bar">
+                        <div id="progressBar"></div>
+                    </div>
+
+                    <p class="progress-text">
+                        Keep going! Every completed task counts 🚀
+                    </p>
+
+                </div>
+
+
+                <!-- Assignments -->
+                <div class="card assignment-card">
+
+                    <div class="card-header">
+                        <div>
+                            <h2>Assignments</h2>
+                            <p>Track your upcoming work</p>
+                        </div>
+                    </div>
+
+                    <form id="assignmentForm" class="assignment-form">
+
+                        <input
+                            type="text"
+                            id="assignmentInput"
+                            placeholder="Assignment name"
+                            required
+                        >
+
+                        <input
+                            type="text"
+                            id="subjectInput"
+                            placeholder="Subject"
+                            required
+                        >
+
+                        <input
+                            type="date"
+                            id="deadlineInput"
+                            required
+                        >
+
+                        <button type="submit">Add</button>
+
+                    </form>
+
+                    <div id="assignmentList"></div>
+
+                </div>
+
+
+                <!-- Pomodoro -->
+                <div class="card pomodoro-card">
+
+                    <h2>Pomodoro Timer</h2>
+                    <p>Focus for 25 minutes</p>
+
+                    <div id="timer">25:00</div>
+
+                    <div class="timer-buttons">
+                        <button id="startBtn">Start</button>
+                        <button id="pauseBtn">Pause</button>
+                        <button id="resetBtn">Reset</button>
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
+```
