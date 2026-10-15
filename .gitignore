@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+*.venv/
+venv/
+.env
+
+# Local database
+backend/productivity.db
+backend/*.db
+
+# Logs
+*.log

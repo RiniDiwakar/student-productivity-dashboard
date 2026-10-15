@@ -1,247 +1,348 @@
-// DATE
+
+"use strict";
+
+// ==================== CONFIGURATION ====================
+
+const API_URL = "http://127.0.0.1:5000/api";
+
+// ==================== DATE ====================
+
 const currentDate = document.getElementById("currentDate");
 
 const today = new Date();
 
-currentDate.textContent = today.toLocaleDateString("en-IN", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric"
-});
+if (currentDate) {
+    currentDate.textContent = today.toLocaleDateString("en-IN", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+    });
+}
 
+// ==================== TASKS ====================
 
-// TASKS
-let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+let tasks = [];
 
 const taskForm = document.getElementById("taskForm");
 const taskInput = document.getElementById("taskInput");
 const priorityInput = document.getElementById("priorityInput");
 const taskList = document.getElementById("taskList");
 
-taskForm.addEventListener("submit", function (e) {
-    e.preventDefault();
+async function loadTasks() {
+    try {
+        const response = await fetch(`${API_URL}/tasks`);
 
-    const task = {
-        id: Date.now(),
-        text: taskInput.value,
-        priority: priorityInput.value,
-        completed: false
-    };
+        if (!response.ok) {
+            throw new Error("Failed to load tasks");
+        }
 
-    tasks.push(task);
+        tasks = await response.json();
+        renderTasks();
+    } catch (error) {
+        console.error("Loading tasks failed:", error);
+        showMessage("Tasks load nahi hue. Flask server check karo.");
+    }
+}
 
-    localStorage.setItem("tasks", JSON.stringify(tasks));
+if (taskForm) {
+    taskForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
 
-    taskInput.value = "";
+        const text = taskInput.value.trim();
+        const priority = priorityInput.value;
 
-    renderTasks();
-});
+        if (!text) {
+            showMessage("Please enter a task.");
+            return;
+        }
 
+        try {
+            const response = await fetch(`${API_URL}/tasks`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ text, priority })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Failed to add task");
+            }
+
+            taskInput.value = "";
+            await loadTasks();
+        } catch (error) {
+            console.error("Adding task failed:", error);
+            showMessage("Task save nahi hua. Flask server check karo.");
+        }
+    });
+}
 
 function renderTasks() {
+    if (!taskList) return;
+
     taskList.innerHTML = "";
 
     tasks.forEach(function (task) {
-
         const div = document.createElement("div");
-
         div.className = "task-item";
 
-        if (task.completed) {
+        if (Boolean(task.completed)) {
             div.classList.add("completed");
         }
 
-        div.innerHTML = `
-            <input 
-                type="checkbox"
-                ${task.completed ? "checked" : ""}
-                onchange="toggleTask(${task.id})"
-            >
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = Boolean(task.completed);
+        checkbox.setAttribute("aria-label", `Complete ${task.text}`);
 
-            <span>${task.text}</span>
+        checkbox.addEventListener("change", function () {
+            toggleTask(task.id, checkbox.checked);
+        });
 
-            <small class="priority">${task.priority}</small>
+        const span = document.createElement("span");
+        span.textContent = task.text;
 
-            <button 
-                class="delete-btn"
-                onclick="deleteTask(${task.id})">
-                Delete
-            </button>
-        `;
+        const priority = document.createElement("small");
+        priority.className = "priority";
+        priority.textContent = task.priority;
 
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "delete-btn";
+        deleteButton.textContent = "Delete";
+        deleteButton.type = "button";
+
+        deleteButton.addEventListener("click", function () {
+            deleteTask(task.id);
+        });
+
+        div.append(checkbox, span, priority, deleteButton);
         taskList.appendChild(div);
     });
 
     updateStats();
 }
 
+async function toggleTask(id, completed) {
+    try {
+        const response = await fetch(`${API_URL}/tasks/${id}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ completed })
+        });
 
-function toggleTask(id) {
-
-    tasks.forEach(function (task) {
-
-        if (task.id === id) {
-            task.completed = !task.completed;
+        if (!response.ok) {
+            throw new Error("Failed to update task");
         }
 
-    });
-
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-
-    renderTasks();
+        await loadTasks();
+    } catch (error) {
+        console.error("Updating task failed:", error);
+        showMessage("Task update nahi hua.");
+        await loadTasks();
+    }
 }
 
+async function deleteTask(id) {
+    try {
+        const response = await fetch(`${API_URL}/tasks/${id}`, {
+            method: "DELETE"
+        });
 
-function deleteTask(id) {
+        if (!response.ok) {
+            throw new Error("Failed to delete task");
+        }
 
-    tasks = tasks.filter(function (task) {
-        return task.id !== id;
-    });
-
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-
-    renderTasks();
+        await loadTasks();
+    } catch (error) {
+        console.error("Deleting task failed:", error);
+        showMessage("Task delete nahi hua.");
+    }
 }
 
+// ==================== STATISTICS ====================
 
-// STATISTICS
 function updateStats() {
-
     const total = tasks.length;
 
     const completed = tasks.filter(function (task) {
-        return task.completed;
+        return Boolean(task.completed);
     }).length;
 
-    let progress = 0;
+    const progress = total > 0
+        ? Math.round((completed / total) * 100)
+        : 0;
 
-    if (total > 0) {
-        progress = Math.round((completed / total) * 100);
+    const totalElement = document.getElementById("totalTasks");
+    const completedElement = document.getElementById("completedTasks");
+    const progressElement = document.getElementById("progressPercent");
+    const circleElement = document.getElementById("circlePercent");
+    const progressBar = document.getElementById("progressBar");
+
+    if (totalElement) {
+        totalElement.textContent = total;
     }
 
-    document.getElementById("totalTasks").textContent = total;
+    if (completedElement) {
+        completedElement.textContent = completed;
+    }
 
-    document.getElementById("completedTasks").textContent = completed;
+    if (progressElement) {
+        progressElement.textContent = `${progress}%`;
+    }
 
-    document.getElementById("progressPercent").textContent =
-        progress + "%";
+    if (circleElement) {
+        circleElement.textContent = `${progress}%`;
+    }
 
-    document.getElementById("circlePercent").textContent =
-        progress + "%";
-
-    document.getElementById("progressBar").style.width =
-        progress + "%";
+    if (progressBar) {
+        progressBar.style.width = `${progress}%`;
+    }
 }
 
+// ==================== ASSIGNMENTS ====================
 
-// ASSIGNMENTS
-let assignments =
-    JSON.parse(localStorage.getItem("assignments")) || [];
+let assignments = [];
 
-const assignmentForm =
-    document.getElementById("assignmentForm");
+const assignmentForm = document.getElementById("assignmentForm");
+const assignmentList = document.getElementById("assignmentList");
 
-const assignmentList =
-    document.getElementById("assignmentList");
+async function loadAssignments() {
+    try {
+        const response = await fetch(`${API_URL}/assignments`);
 
-assignmentForm.addEventListener("submit", function (e) {
+        if (!response.ok) {
+            throw new Error("Failed to load assignments");
+        }
 
-    e.preventDefault();
+        assignments = await response.json();
+        renderAssignments();
+    } catch (error) {
+        console.error("Loading assignments failed:", error);
+        showMessage("Assignments load nahi hue. Flask server check karo.");
+    }
+}
 
-    const name =
-        document.getElementById("assignmentInput").value;
+if (assignmentForm) {
+    assignmentForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
 
-    const subject =
-        document.getElementById("subjectInput").value;
+        const name = document.getElementById("assignmentInput").value.trim();
+        const subject = document.getElementById("subjectInput").value.trim();
+        const deadline = document.getElementById("deadlineInput").value;
 
-    const deadline =
-        document.getElementById("deadlineInput").value;
+        if (!name || !subject || !deadline) {
+            showMessage("Please fill all assignment fields.");
+            return;
+        }
 
-    const assignment = {
-        id: Date.now(),
-        name: name,
-        subject: subject,
-        deadline: deadline
-    };
+        try {
+            const response = await fetch(`${API_URL}/assignments`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ name, subject, deadline })
+            });
 
-    assignments.push(assignment);
+            const result = await response.json();
 
-    localStorage.setItem(
-        "assignments",
-        JSON.stringify(assignments)
-    );
+            if (!response.ok) {
+                throw new Error(result.error || "Failed to add assignment");
+            }
 
-    assignmentForm.reset();
-
-    renderAssignments();
-});
-
+            assignmentForm.reset();
+            await loadAssignments();
+        } catch (error) {
+            console.error("Adding assignment failed:", error);
+            showMessage("Assignment save nahi hua. Flask server check karo.");
+        }
+    });
+}
 
 function renderAssignments() {
+    if (!assignmentList) return;
 
     assignmentList.innerHTML = "";
 
     assignments.forEach(function (assignment) {
-
         const div = document.createElement("div");
-
         div.className = "assignment-item";
 
-        div.innerHTML = `
-            <strong>${assignment.name}</strong>
+        const name = document.createElement("strong");
+        name.textContent = assignment.name;
 
-            <small>
-                ${assignment.subject}
-                |
-                Deadline: ${assignment.deadline}
-            </small>
+        const details = document.createElement("small");
+        details.textContent =
+            `${assignment.subject} | Deadline: ${assignment.deadline}`;
 
-            <br><br>
+        const lineBreak = document.createElement("br");
+        const secondBreak = document.createElement("br");
 
-            <button
-                class="delete-btn"
-                onclick="deleteAssignment(${assignment.id})">
-                Delete
-            </button>
-        `;
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "delete-btn";
+        deleteButton.textContent = "Delete";
+        deleteButton.type = "button";
+
+        deleteButton.addEventListener("click", function () {
+            deleteAssignment(assignment.id);
+        });
+
+        div.append(
+            name,
+            document.createElement("br"),
+            details,
+            lineBreak,
+            secondBreak,
+            deleteButton
+        );
 
         assignmentList.appendChild(div);
     });
 
-    document.getElementById("assignmentCount").textContent =
-        assignments.length;
+    const countElement = document.getElementById("assignmentCount");
+
+    if (countElement) {
+        countElement.textContent = assignments.length;
+    }
 }
 
+async function deleteAssignment(id) {
+    try {
+        const response = await fetch(`${API_URL}/assignments/${id}`, {
+            method: "DELETE"
+        });
 
-function deleteAssignment(id) {
+        if (!response.ok) {
+            throw new Error("Failed to delete assignment");
+        }
 
-    assignments = assignments.filter(function (assignment) {
-        return assignment.id !== id;
-    });
-
-    localStorage.setItem(
-        "assignments",
-        JSON.stringify(assignments)
-    );
-
-    renderAssignments();
+        await loadAssignments();
+    } catch (error) {
+        console.error("Deleting assignment failed:", error);
+        showMessage("Assignment delete nahi hua.");
+    }
 }
 
+// ==================== POMODORO TIMER ====================
 
-// POMODORO
 let timeLeft = 25 * 60;
-
 let timerInterval = null;
 
-const timerDisplay =
-    document.getElementById("timer");
-
+const timerDisplay = document.getElementById("timer");
+const startBtn = document.getElementById("startBtn");
+const pauseBtn = document.getElementById("pauseBtn");
+const resetBtn = document.getElementById("resetBtn");
 
 function updateTimer() {
+    if (!timerDisplay) return;
 
     const minutes = Math.floor(timeLeft / 60);
-
     const seconds = timeLeft % 60;
 
     timerDisplay.textContent =
@@ -250,60 +351,51 @@ function updateTimer() {
         String(seconds).padStart(2, "0");
 }
 
-
-document.getElementById("startBtn").addEventListener("click", function () {
-
-    if (timerInterval !== null) {
-        return;
-    }
-
-    timerInterval = setInterval(function () {
-
-        if (timeLeft > 0) {
-
-            timeLeft--;
-
-            updateTimer();
-
-        } else {
-
-            clearInterval(timerInterval);
-
-            timerInterval = null;
-
-            alert("Pomodoro complete! Take a break.");
+if (startBtn) {
+    startBtn.addEventListener("click", function () {
+        if (timerInterval !== null || timeLeft <= 0) {
+            return;
         }
 
-    }, 1000);
+        timerInterval = setInterval(function () {
+            if (timeLeft > 0) {
+                timeLeft--;
+                updateTimer();
+            }
 
-});
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                showMessage("Pomodoro complete! Take a break.");
+            }
+        }, 1000);
+    });
+}
 
+if (pauseBtn) {
+    pauseBtn.addEventListener("click", function () {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    });
+}
 
-document.getElementById("pauseBtn").addEventListener("click", function () {
+if (resetBtn) {
+    resetBtn.addEventListener("click", function () {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timeLeft = 25 * 60;
+        updateTimer();
+    });
+}
 
-    clearInterval(timerInterval);
+// ==================== MESSAGE HELPER ====================
 
-    timerInterval = null;
+function showMessage(message) {
+    alert(message);
+}
 
-});
+// ==================== INITIAL LOAD ====================
 
-
-document.getElementById("resetBtn").addEventListener("click", function () {
-
-    clearInterval(timerInterval);
-
-    timerInterval = null;
-
-    timeLeft = 25 * 60;
-
-    updateTimer();
-
-});
-
-
-// INITIAL LOAD
-renderTasks();
-
-renderAssignments();
-
+loadTasks();
+loadAssignments();
 updateTimer();
