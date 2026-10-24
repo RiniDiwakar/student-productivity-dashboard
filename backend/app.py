@@ -1,5 +1,6 @@
 
 import os
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import psycopg
@@ -11,6 +12,7 @@ CORS(app)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
+# Connect to Neon PostgreSQL
 def get_db_connection():
     if not DATABASE_URL:
         raise RuntimeError(
@@ -25,6 +27,7 @@ def get_db_connection():
     )
 
 
+# Create database tables
 def initialize_database():
     with get_db_connection() as connection:
         connection.execute("""
@@ -46,6 +49,7 @@ def initialize_database():
         """)
 
 
+# Home route
 @app.route("/")
 def home():
     return jsonify({
@@ -53,6 +57,7 @@ def home():
     })
 
 
+# Get all tasks
 @app.route("/api/tasks", methods=["GET"])
 def get_tasks():
     with get_db_connection() as connection:
@@ -63,6 +68,7 @@ def get_tasks():
     return jsonify([dict(row) for row in rows])
 
 
+# Add a task
 @app.route("/api/tasks", methods=["POST"])
 def add_task():
     data = request.get_json(silent=True) or {}
@@ -94,6 +100,7 @@ def add_task():
     }), 201
 
 
+# Mark a task complete or incomplete
 @app.route("/api/tasks/<int:task_id>", methods=["PATCH"])
 def update_task(task_id):
     data = request.get_json(silent=True) or {}
@@ -118,6 +125,7 @@ def update_task(task_id):
     return jsonify({"message": "Task updated successfully"})
 
 
+# Delete a task
 @app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
 def delete_task(task_id):
     with get_db_connection() as connection:
@@ -132,6 +140,7 @@ def delete_task(task_id):
     return jsonify({"message": "Task deleted successfully"})
 
 
+# Get all assignments
 @app.route("/api/assignments", methods=["GET"])
 def get_assignments():
     with get_db_connection() as connection:
@@ -142,6 +151,7 @@ def get_assignments():
     return jsonify([dict(row) for row in rows])
 
 
+# Add an assignment
 @app.route("/api/assignments", methods=["POST"])
 def add_assignment():
     data = request.get_json(silent=True) or {}
@@ -173,6 +183,7 @@ def add_assignment():
     }), 201
 
 
+# Delete an assignment
 @app.route("/api/assignments/<int:assignment_id>", methods=["DELETE"])
 def delete_assignment(assignment_id):
     with get_db_connection() as connection:
@@ -187,6 +198,9 @@ def delete_assignment(assignment_id):
     return jsonify({"message": "Assignment deleted successfully"})
 
 
+# Initialize tables when Gunicorn imports this file on Render
+initialize_database()
+
+
 if __name__ == "__main__":
-    initialize_database()
     app.run(debug=True)
